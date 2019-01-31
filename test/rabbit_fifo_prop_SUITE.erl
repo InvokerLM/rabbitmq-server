@@ -473,7 +473,8 @@ run_snapshot_test(Conf, Commands) ->
 run_snapshot_test0(Conf, Commands) ->
     Indexes = lists:seq(1, length(Commands)),
     Entries = lists:zip(Indexes, Commands),
-    {State, Effects} = run_log(test_init(Conf), Entries),
+    {State0, Effects} = run_log(test_init(Conf), Entries),
+    State = rabbit_fifo:normalize(State0),
     % ct:pal("beginning snapshot test run for ~w numn commands ~b",
     %        [maps:get(name, Conf), length(Commands)]),
 
@@ -482,7 +483,12 @@ run_snapshot_test0(Conf, Commands) ->
          Filtered = lists:dropwhile(fun({X, _}) when X =< SnapIdx -> true;
                                        (_) -> false
                                     end, Entries),
-         {S, _} = run_log(SnapState, Filtered),
+         % ct:pal("running from snapshot at ~w ~p", [SnapIdx, SnapState]),
+         % ct:pal("Snapshot tests run log:~n"
+         %        "~p~n from ~n~p~n Entries~n~p~n",
+         %        [Filtered, SnapState, Entries]),
+         {S0, _} = run_log(SnapState, Filtered),
+         S = rabbit_fifo:normalize(S0),
          % assert log can be restored from any release cursor index
          case S of
              State -> ok;
